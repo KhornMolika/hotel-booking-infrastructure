@@ -22,3 +22,15 @@ destroy:
 # Command to preview what Terraform will do without actually applying it
 plan:
 	cd terraform && terraform init && terraform plan
+
+# Command to deploy everything, wait for you to test it, and then automatically destroy it
+test-ephemeral:
+	@echo "Starting Ephemeral Deployment Test..."
+	just apply
+	@echo "\n==============================================================="
+	@echo "DEPLOYMENT COMPLETE! The server is now running."
+	@echo "Go test your application and monitoring dashboards."
+	@echo "Press [ENTER] when you are finished to automatically destroy the server."
+	@echo "===============================================================\n"
+	@bash -c 'read -s -n 1 -p ""'
+	just destroy
