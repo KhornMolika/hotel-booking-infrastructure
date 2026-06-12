@@ -6,9 +6,9 @@ apply:
 	@echo "2/3 Updating Ansible inventory for K3s..."
 	@bash -c '\
 		echo "[master_1]" > ansible/inventory.ini; \
-		IP=$$(cd terraform && terraform output -raw instance_ip); \
-		USER=$$(cd terraform && terraform output -raw ssh_user); \
-		echo "$$IP ansible_user=$$USER ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"" >> ansible/inventory.ini; \
+		IP=$(cd terraform && terraform output -raw instance_ip); \
+		USER=$(cd terraform && terraform output -raw ssh_user); \
+		echo "$IP ansible_user=$USER ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"" >> ansible/inventory.ini; \
 	'
 	
 	@echo "3/3 Running Ansible playbook to install K3s and deploy apps..."
