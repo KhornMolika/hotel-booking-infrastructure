@@ -1,36 +1,32 @@
-# Default command to deploy the infrastructure and configure it
+# Default command to deploy the K3s HA cluster and configure it
 apply:
 	@echo "1/3 Applying Terraform configuration..."
-	# This initializes Terraform and provisions the GCP server and firewall rules
 	cd terraform && terraform init && terraform apply -auto-approve
 	
-	@echo "2/3 Updating Ansible inventory..."
-	# This grabs the new public IP address from Terraform and writes it to Ansible's inventory file
-	echo "[app_servers]" > ansible/inventory.ini
-	echo "$$(cd terraform && terraform output -raw instance_ip) ansible_user=$$(cd terraform && terraform output -raw ssh_user) ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ansible/inventory.ini
+	@echo "2/3 Updating Ansible inventory for K3s..."
+	@bash -c '\
+		echo "[master_1]" > ansible/inventory.ini; \
+		IP=$$(cd terraform && terraform output -raw instance_ip); \
+		USER=$$(cd terraform && terraform output -raw ssh_user); \
+		echo "$$IP ansible_user=$$USER ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"" >> ansible/inventory.ini; \
+	'
 	
-	@echo "3/3 Running Ansible playbook..."
-	# This installs any required Ansible collections and runs the playbook to configure the server
-	cd ansible && ansible-galaxy collection install community.docker
+	@echo "3/3 Running Ansible playbook to install K3s and deploy apps..."
 	cd ansible && ansible-playbook playbook.yml
 
-# Command to delete all the resources created by Terraform
 destroy:
 	@echo "Destroying infrastructure..."
 	cd terraform && terraform destroy -auto-approve
 
-# Command to preview what Terraform will do without actually applying it
 plan:
 	cd terraform && terraform init && terraform plan
 
-# Command to deploy everything, wait for you to test it, and then automatically destroy it
 test-ephemeral:
 	@echo "Starting Ephemeral Deployment Test..."
 	just apply
 	@echo "\n==============================================================="
-	@echo "DEPLOYMENT COMPLETE! The server is now running."
-	@echo "Go test your application and monitoring dashboards."
-	@echo "Press [ENTER] when you are finished to automatically destroy the server."
+	@echo "K3S CLUSTER DEPLOYMENT COMPLETE! The servers are now running."
+	@echo "Press [ENTER] when you are finished testing to destroy the cluster."
 	@echo "===============================================================\n"
 	@bash -c 'read -s -n 1 -p ""'
 	just destroy

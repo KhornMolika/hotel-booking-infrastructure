@@ -1,0 +1,21 @@
+---
+- name: Create manifests directory
+  file:
+    path: /var/lib/rancher/k3s/server/manifests/custom
+    state: directory
+
+- name: Copy App Stack Manifests
+  copy:
+    src: app-stack.yaml
+    dest: /var/lib/rancher/k3s/server/manifests/custom/app-stack.yaml
+
+- name: Copy Monitoring Stack Manifests
+  copy:
+    src: monitoring-stack.yaml
+    dest: /var/lib/rancher/k3s/server/manifests/custom/monitoring-stack.yaml
+
+- name: Apply App Stack
+  command: k3s kubectl apply -f /var/lib/rancher/k3s/server/manifests/custom/app-stack.yaml
+
+- name: Apply Monitoring Stack
+  command: k3s kubectl apply -f /var/lib/rancher/k3s/server/manifests/custom/monitoring-stack.yaml

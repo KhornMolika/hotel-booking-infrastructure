@@ -1,0 +1,146 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hotel-booking
+---
+# POSTGRES
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hotel-postgres
+  namespace: hotel-booking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hotel-postgres
+  template:
+    metadata:
+      labels:
+        app: hotel-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:latest
+          env:
+            - name: POSTGRES_USER
+              value: hotel_user
+            - name: POSTGRES_PASSWORD
+              value: Qsi5kO49C9HdgmtOiQCcetmZwHANWiCiq+mrC07gN00=
+            - name: POSTGRES_DB
+              value: hotel_booking
+          ports:
+            - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hotel-postgres
+  namespace: hotel-booking
+spec:
+  selector:
+    app: hotel-postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+---
+# SPRING BACKEND
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-backend
+  namespace: hotel-booking
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: spring-backend
+  template:
+    metadata:
+      labels:
+        app: spring-backend
+    spec:
+      containers:
+        - name: backend
+          image: ampor/hotel-booking-backend:latest
+          env:
+            - name: DATABASE_URL
+              value: jdbc:postgresql://hotel-postgres:5432/hotel_booking
+            - name: DATABASE_USERNAME
+              value: hotel_user
+            - name: DATABASE_PASSWORD
+              value: Qsi5kO49C9HdgmtOiQCcetmZwHANWiCiq+mrC07gN00=
+            - name: JWT_SECRET
+              value: zR4vK9wX8bY1c7dQ2eN5m6pQ3rT8uW1xY4zA7bC0dE3fG6hI9jK2lM5nO8pQ1rS
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-backend
+  namespace: hotel-booking
+spec:
+  selector:
+    app: spring-backend
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+---
+# REACT FRONTEND
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: react-frontend
+  namespace: hotel-booking
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: react-frontend
+  template:
+    metadata:
+      labels:
+        app: react-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: alexkgm/hotel-booking:latest
+          ports:
+            - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: react-frontend
+  namespace: hotel-booking
+spec:
+  selector:
+    app: react-frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+---
+# INGRESS (Traefik is pre-installed on K3s)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hotel-booking-ingress
+  namespace: hotel-booking
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+    - host: hotel-booking.molika.app
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: react-frontend
+                port:
+                  number: 80

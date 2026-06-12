@@ -1,0 +1,21 @@
+---
+- name: Install K3s on first master node
+  shell: |
+    curl -sfL https://get.k3s.io | sh -s - server --cluster-init
+  args:
+    creates: /etc/rancher/k3s/k3s.yaml
+
+- name: Wait for K3s token file to be created
+  wait_for:
+    path: /var/lib/rancher/k3s/server/node-token
+    state: present
+
+- name: Get K3s token
+  command: cat /var/lib/rancher/k3s/server/node-token
+  register: k3s_token_output
+  changed_when: false
+
+- name: Save token as a dummy host variable so other nodes can use it
+  add_host:
+    name: "K3S_VARS"
+    token: "{{ k3s_token_output.stdout }}"
