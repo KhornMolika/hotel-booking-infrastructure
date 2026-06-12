@@ -1,0 +1,13 @@
+---
+- name: Setup Application Server
+  hosts: all
+  become: yes
+  roles:
+    - docker
+
+- name: Deploy Application and Monitoring
+  hosts: all
+  become: no
+  roles:
+    - app_stack
+    - monitoring

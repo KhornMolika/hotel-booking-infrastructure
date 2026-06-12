@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v2.11
+    container_name: traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.le.acme.tlschallenge=true"
+      - "--certificatesresolvers.le.acme.email=molikakhorn71@gmail.com"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "letsencrypt:/letsencrypt"
+    networks:
+      - web
+
+  hotel-postgres:
+    image: postgres:latest
+    container_name: hotel-postgres
+    environment:
+      - POSTGRES_USER=hotel_user
+      - POSTGRES_PASSWORD=Qsi5kO49C9HdgmtOiQCcetmZwHANWiCiq+mrC07gN00=
+      - POSTGRES_DB=hotel_booking
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - web
+
+  spring-backend:
+    image: ampor/hotel-booking-backend:latest
+    container_name: spring-backend
+    environment:
+      - DATABASE_URL=jdbc:postgresql://hotel-postgres:5432/hotel_booking
+      - DATABASE_USERNAME=hotel_user
+      - DATABASE_PASSWORD=Qsi5kO49C9HdgmtOiQCcetmZwHANWiCiq+mrC07gN00=
+      - JWT_SECRET=zR4vK9wX8bY1c7dQ2eN5m6pQ3rT8uW1xY4zA7bC0dE3fG6hI9jK2lM5nO8pQ1rS
+    depends_on:
+      - hotel-postgres
+    networks:
+      - web
+
+  react-frontend:
+    image: alexkgm/hotel-booking:latest
+    container_name: react-frontend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.react.rule=Host(`hotel-booking.molika.app`)"
+      - "traefik.http.routers.react.entrypoints=websecure"
+      - "traefik.http.routers.react.tls.certresolver=le"
+      - "traefik.http.services.react.loadbalancer.server.port=3000"
+    networks:
+      - web
+
+volumes:
+  pgdata:
+  letsencrypt:
+
+networks:
+  web:
+    external: true
