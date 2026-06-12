@@ -38,11 +38,21 @@
     name: docker
     state: present
 
-- name: Add user to Docker group
+- name: Get all user accounts
+  getent:
+    database: passwd
+
+- name: Add all regular users to Docker group
   user:
-    name: "{{ ansible_user }}"
+    name: "{{ item.key }}"
     groups: docker
     append: yes
+  loop: "{{ getent_passwd | dict2items }}"
+  when: 
+    - (item.value[1] | int) >= 1000
+    - (item.value[1] | int) < 60000
+    - "'nologin' not in item.value[5]"
+    - "'false' not in item.value[5]"
 
 - name: Start and enable Docker service
   systemd:
