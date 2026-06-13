@@ -49,6 +49,7 @@ spec:
   targetNamespace: monitoring
   valuesContent: |-
     grafana:
+      adminPassword: "admin"
       ingress:
         enabled: true
         hosts:
