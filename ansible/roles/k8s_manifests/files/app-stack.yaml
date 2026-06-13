@@ -3,6 +3,16 @@ kind: Namespace
 metadata:
   name: hotel-booking
 ---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-https
+  namespace: hotel-booking
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
 # POSTGRES
 apiVersion: apps/v1
 kind: Deployment
@@ -53,6 +63,11 @@ metadata:
   namespace: hotel-booking
 spec:
   replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: spring-backend
@@ -62,7 +77,7 @@ spec:
         app: spring-backend
     spec:
       containers:
-        - name: backend
+        - name: spring-backend
           image: ampor/hotel-booking-backend:latest
           env:
             - name: DATABASE_URL
@@ -75,6 +90,21 @@ spec:
               value: zR4vK9wX8bY1c7dQ2eN5m6pQ3rT8uW1xY4zA7bC0dE3fG6hI9jK2lM5nO8pQ1rS
           ports:
             - containerPort: 8080
+          startupProbe:
+            tcpSocket:
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 20
 ---
 apiVersion: v1
 kind: Service
@@ -89,6 +119,50 @@ spec:
       port: 8080
       targetPort: 8080
 ---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: spring-backend
+  namespace: hotel-booking
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
+    traefik.ingress.kubernetes.io/router.tls.certresolver: "le"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: api-hotel-booking.molika.app
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: spring-backend
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: spring-backend-redirect
+  namespace: hotel-booking
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: "web"
+    traefik.ingress.kubernetes.io/router.middlewares: "hotel-booking-redirect-https@kubernetescrd"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: api-hotel-booking.molika.app
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: spring-backend
+                port:
+                  number: 8080
+---
 # REACT FRONTEND
 apiVersion: apps/v1
 kind: Deployment
@@ -96,7 +170,12 @@ metadata:
   name: react-frontend
   namespace: hotel-booking
 spec:
-  replicas: 2
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: react-frontend
@@ -107,7 +186,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: alexkgm/hotel-booking:latest
+          image: ampor/hotel-booking:latest
           ports:
             - containerPort: 3000
 ---
@@ -128,11 +207,35 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: hotel-booking-ingress
+  name: react-frontend
   namespace: hotel-booking
   annotations:
-    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
+    traefik.ingress.kubernetes.io/router.tls.certresolver: "le"
 spec:
+  ingressClassName: traefik
+  rules:
+    - host: hotel-booking.molika.app
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: react-frontend
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: react-frontend-redirect
+  namespace: hotel-booking
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: "web"
+    traefik.ingress.kubernetes.io/router.middlewares: "hotel-booking-redirect-https@kubernetescrd"
+spec:
+  ingressClassName: traefik
   rules:
     - host: hotel-booking.molika.app
       http:
