@@ -31,5 +31,5 @@ variable "ssh_user" {
 variable "ssh_pub_key_path" {
   description = "Path to the public SSH key to be added to the instance"
   type        = string
-  default     = "~/.ssh/id_ed25519.pub"
+  default     = "/mnt/c/Users/LEGION/.ssh/id_ed25519.pub"
 }

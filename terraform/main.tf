@@ -87,7 +87,7 @@ resource "google_compute_instance" "app_server" {
   }
 
   metadata = {
-    ssh-keys = "${var.ssh_user}:${file(var.ssh_pub_key_path)}"
+    ssh-keys = "${var.ssh_user}:${file(pathexpand(var.ssh_pub_key_path))}"
   }
 
   tags = ["web-server", "k3s"]
